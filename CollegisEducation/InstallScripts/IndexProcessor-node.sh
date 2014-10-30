@@ -7,6 +7,7 @@
 
 set -e
 # Setup logging
+mkdir -p /opt/collegis/software/logstash
 # Logs stderr and stdout to separate files.
 exec 2> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-client-node.err")
 exec > >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-client-node.log")

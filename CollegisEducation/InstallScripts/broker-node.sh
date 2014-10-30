@@ -114,7 +114,7 @@ input {
 }
 output {
   redis {
-  host => "indexer01"
+  host => "elkindex-ob-1p"
   data_type => "list"
   key => "logstash"
   }

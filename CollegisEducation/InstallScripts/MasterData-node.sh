@@ -32,6 +32,10 @@ sleep 15
 
 ############################### Logstash - Elasticsearch cluster Setup ##################################
 # Install Pre-Reqs
+
+# Register server with satellite
+curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+
 tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
 [logstash-1.4]
 name=logstash repository for 1.4.x packages

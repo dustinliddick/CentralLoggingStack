@@ -111,22 +111,22 @@ service elasticsearch restart
 /usr/share/elasticsearch/bin/plugin -install mobz/elasticsearch-head
 
 # Install elasticsearch curator http://www.elasticsearch.org/blog/curator-tending-your-time-series-indices/
-yum install -y --nogpgcheck install python-pip
+yum install -y --nogpgcheck python-pip
 pip install elasticsearch-curator
 
 # Create /etc/cron.daily/elasticsearch_curator Cron Job and send output to logstash tagged as curator
 tee -a /etc/cron.daily/elasticsearch_curator <<EOF
 #!/bin/sh
-curator delete --older-than 90 2>&1 | nc logstash 28778
-curator close --older-than 30 2>&1 | nc logstash 28778
-curator bloom --older-than 2 2>&1 | nc logstash 28778
-curator optimize --older-than 2 2>&1 | nc logstash 28778
+curator delete --older-than 90 2>&1
+curator close --older-than 30 2>&1
+curator bloom --older-than 2 2>&1
+curator optimize --older-than 2 2>&1
 
 # Cleanup Marvel plugin indices
-curator delete --older-than 60 -p .marvel- 2>&1 | nc logstash 28778
-curator close --older-than 7 -p .marvel- 2>&1 | nc logstash 28778
-curator bloom --older-than 2 -p .marvel- 2>&1 | nc logstash 28778
-curator optimize --older-than 2 -p .marvel- 2>&1 | nc logstash 28778 
+curator delete --older-than 60 -p .marvel- 2>&1
+curator close --older-than 7 -p .marvel- 2>&1
+curator bloom --older-than 2 -p .marvel- 2>&1
+curator optimize --older-than 2 -p .marvel- 2>&1
 
 # Email report
 #recipients="emailAdressToReceiveReport"

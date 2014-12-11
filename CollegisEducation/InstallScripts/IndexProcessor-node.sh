@@ -10,7 +10,7 @@ set -e
 mkdir -p /opt/collegis/software/logstash
 # Logs stderr and stdout to separate files.
 exec 2> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-client-node.err")
-exec > >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-client-node.log")
+exec 1> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-client-node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"

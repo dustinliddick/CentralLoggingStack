@@ -49,7 +49,7 @@ enabled=1
 EOF
 
 # Register server with satellite
-curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+#curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
 
 # Install Oracle Java 8 
 echo "Installing Oracle Java 8"

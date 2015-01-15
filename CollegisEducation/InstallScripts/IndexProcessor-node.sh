@@ -6,7 +6,7 @@
 # This script configures the node as a logstash processor, Elasticsearch client node in logstash-cluster
 
 set -e
-# Setup logging
+# Setup logging directories
 mkdir -p /opt/collegis/software/logstash
 # Logs stderr and stdout to separate files.
 exec 2> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-client-node.err")
@@ -323,43 +323,43 @@ filter {
         }
 }
 # Filtering for SSH logins either failed or successful
-filter {
-        if "syslog" in [tags] {
-                if [syslog_program] == "sshd" {
-                        if "Failed password" in [message] {
-                                grok {
-                                        break_on_match => false
-                                        match => [
-                                                "message", "invalid user %{DATA:UserName} from %{IP:src_ip}",
-                                                "message", "for %{DATA:UserName} from %{IP:src_ip}"
-                                        ]
-                                }
-                                mutate {
-                                        add_tag => [ "SSH_Failed_Login" ]
-                                }
-                        }
-                        if "Accepted password" in [message] {
-                                grok {
-                                        match => [
-                                                "message", "for %{DATA:UserName} from %{IP:src_ip}"
-                                        ]
-                                }
-                                mutate {
-                                        add_tag => [ "SSH_Successful_Login" ]
-                                }
-                        }
-                        geoip {
-                                source => "src_ip"
-                                target => "geoip"
-                                add_field => [ "[geoip][coordinates]", "%{[geoip][longitude]}" ]
-                                add_field => [ "[geoip][coordinates]", "%{[geoip][latitude]}"  ]
-                        }
-                        mutate {
-                                convert => [ "[geoip][coordinates]", "float" ]
-                        }
-                }
-        }
-}
+#filter {
+#        if "syslog" in [tags] {
+#                if [syslog_program] == "sshd" {
+#                        if "Failed password" in [message] {
+#                                grok {
+#                                        break_on_match => false
+#                                        match => [
+#                                                "message", "invalid user %{DATA:UserName} from %{IP:src_ip}",
+#                                                "message", "for %{DATA:UserName} from %{IP:src_ip}"
+#                                        ]
+#                                }
+#                                mutate {
+#                                        add_tag => [ "SSH_Failed_Login" ]
+#                                }
+#                        }
+#                        if "Accepted password" in [message] {
+#                                grok {
+#                                        match => [
+#                                                "message", "for %{DATA:UserName} from %{IP:src_ip}"
+#                                        ]
+#                                }
+#                                mutate {
+#                                        add_tag => [ "SSH_Successful_Login" ]
+#                                }
+#                        }
+#                        geoip {
+#                                source => "src_ip"
+#                                target => "geoip"
+#                                add_field => [ "[geoip][coordinates]", "%{[geoip][longitude]}" ]
+#                                add_field => [ "[geoip][coordinates]", "%{[geoip][latitude]}"  ]
+#                        }
+#                        mutate {
+#                                convert => [ "[geoip][coordinates]", "float" ]
+#                        }
+#                }
+#        }
+#}
 # Setting up VMware ESX(i) log parsing
 filter {
         if "VMware" in [tags] {

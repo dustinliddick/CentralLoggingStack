@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-# This script configures the node as a logstash broker sending to redis on backend logstash processors
+# This script configures the node as a redis broker sending to logstash on backend processors
 
 set -e
 # Setup logging
@@ -30,34 +30,6 @@ echo "Your FQDN is currently ${red}$yourfqdn${NC}"
 echo "Detected IP Address is ${red}$IPADDY${NC}"
 sleep 10
 
-############################### Logstash - Elasticsearch cluster Setup ##################################
-# Install Pre-Reqs
-tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
-[logstash-1.4]
-name=logstash repository for 1.4.x packages
-baseurl=http://packages.elasticsearch.org/logstash/1.4/centos
-gpgcheck=1
-gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
-enabled=1
-
-[elasticsearch-1.0]
-name=Elasticsearch repository for 1.0.x packages
-baseurl=http://packages.elasticsearch.org/elasticsearch/1.0/centos
-gpgcheck=1
-gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
-enabled=1
-EOF
-
-# Register server with satellite
-#curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
-
-# Install Oracle Java 8 
-echo "Installing Oracle Java 8"
-cd /opt/collegis/software/java
-wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u20-b26/jdk-8u20-linux-x64.tar.gz"
-tar -zxvf jdk-8u20-linux-x64.tar.gz
-update-alternatives --install /usr/bin/java java /opt/collegis/software/java/jdk1.8.0_20/bin/java 2
- 
 ##################### Logstash Front-End Broker Setup ###########################################
 
 # Install Logstash

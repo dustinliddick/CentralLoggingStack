@@ -73,7 +73,7 @@ echo "index.number_of_shards: 5" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_replicas: 1" >> /etc/elasticsearch/elasticsearch.yml
 echo "bootstrap.mlockall: true" >> /etc/elasticsearch/elasticsearch.yml
 echo "##### Uncomment below instead of using multicast and update with your actual ES Master/Data nodenames #####" >> /etc/elasticsearch/elasticsearch.yml
-echo 'discovery.zen.ping.unicast.hosts: ["elkes-ob-1p", "elkes-ob-2p", "elkes-ob-3p"]' >> /etc/elasticsearch/elasticsearch.yml
+echo 'discovery.zen.ping.unicast.hosts: ["elkes-ob-4p", "elkes-ob-2p", "elkes-ob-3p"]' >> /etc/elasticsearch/elasticsearch.yml
 echo "#discovery.zen.ping.multicast.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
 echo "#### Prevent split brain ES Cluster n/2+1 ####" >> /etc/elasticsearch/elasticsearch.yml
 echo "#discovery.zen.minimum_master_nodes: 1" >> /etc/elasticsearch/elasticsearch.yml

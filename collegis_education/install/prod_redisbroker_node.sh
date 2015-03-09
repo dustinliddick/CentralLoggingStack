@@ -71,14 +71,15 @@ cd deps
 make hiredis jemalloc linenoise lua
 cd ..
 make install
+
+#The following will be need to be done by hand
 cd utils && ./install_server.sh
 
 # check if redis is working proper
-
 redis-cli ping # result should yield `pong`
 
 # bind redis to your public interface so that other servers can connect to it
-vi /etc/redis/6379.conf
+vi /etc/redis/redis.conf
 bind 127.0.0.1 to 0.0.0.0
 service redis_6379 restart
 ### Install Redis Complete ###

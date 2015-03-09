@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# This script will setup an elasticsearch node as a dedicated data node only...no logstash instances
+# This is the Elastic Search Cluster setup. This cluster recieves logs that are
+# sent from the indexing nodes. This script will setup an elasticsearch node as
+# a dedicated ES mastesr data node only...no logstash instances
 
 set -e
 # Setup logging
@@ -34,7 +36,9 @@ sleep 15
 # Install Pre-Reqs
 
 # Register server with satellite
-#curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
+rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
 
 tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
 [logstash-1.4]
@@ -52,7 +56,7 @@ gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1
 EOF
 
-# Install Oracle Java 8 
+# Install Oracle Java 8
 echo "Installing Oracle Java 8"
 mkdir /opt/collegis/software/java
 cd /opt/collegis/software/java
@@ -65,18 +69,54 @@ yum install -y --nogpgcheck elasticsearch
 
 # Configuring Elasticsearch
 echo "### Below is added using install script ###" >> /etc/elasticsearch/elasticsearch.yml
-echo "cluster.name: logstash-cluster" >> /etc/elasticsearch/elasticsearch.yml
+
+# Node name
+echo "cluster.name: es_cluster" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.name: $yourhostname" >> /etc/elasticsearch/elasticsearch.yml
+echo "node.datacenter: latisys" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.master: true" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.data: true" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_shards: 5" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_replicas: 1" >> /etc/elasticsearch/elasticsearch.yml
 echo "bootstrap.mlockall: true" >> /etc/elasticsearch/elasticsearch.yml
-echo "##### Uncomment below instead of using multicast and update with your actual ES Master/Data nodenames #####" >> /etc/elasticsearch/elasticsearch.yml
-echo 'discovery.zen.ping.unicast.hosts: ["elkes-ob-4p", "elkes-ob-2p", "elkes-ob-3p"]' >> /etc/elasticsearch/elasticsearch.yml
-echo "#discovery.zen.ping.multicast.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
+## Threadpool Settings ##
+# Search pool
+echo "threadpool.search.type: fixed" >> /etc/elasticsearch/elasticsearch.yml
+echo "threadpool.search.size: 20" >> /etc/elasticsearch/elasticsearch.yml
+echo "threadpool.search.queue_size: 100" >> /etc/elasticsearch/elasticsearch.yml
+
+# Bulk pool
+echo "threadpool.bulk.type: fixed" >> /etc/elasticsearch/elasticsearch.yml
+echo "threadpool.bulk.size: 60" >> /etc/elasticsearch/elasticsearch.yml
+echo "threadpool.bulk.queue_size: 300" >> /etc/elasticsearch/elasticsearch.yml
+
+# Index pool
+echo "threadpool.index.type: fixed" >> /etc/elasticsearch/elasticsearch.yml
+echo "threadpool.index.size: 20" >> /etc/elasticsearch/elasticsearch.yml
+echo "threadpool.index.queue_size: 100" >> /etc/elasticsearch/elasticsearch.yml
+
+# Indices settings
+echo "indices.memory.index_buffer_size: 30%" >> /etc/elasticsearch/elasticsearch.yml
+echo "indices.memory.min_shard_index_buffer_size: 12mb" >> /etc/elasticsearch/elasticsearch.yml
+echo "indices.memory.min_index_buffer_size: 96mb" >> /etc/elasticsearch/elasticsearch.yml
+
+# Cache Sizes
+echo "indices.fielddata.cache.size: 15%" >> /etc/elasticsearch/elasticsearch.yml
+echo "indices.fielddata.cache.expire: 6h" >> /etc/elasticsearch/elasticsearch.yml
+echo "indices.cache.filter.size: 15%" >> /etc/elasticsearch/elasticsearch.yml
+echo "indices.cache.filter.expire: 6h" >> /etc/elasticsearch/elasticsearch.yml
+
+# Indexing Settings for Writes
+echo "index.refresh_interval: 30s" >> /etc/elasticsearch/elasticsearch.yml
+echo "index.translog.flush_threshold_ops: 50000" >> /etc/elasticsearch/elasticsearch.yml
+
+# Minimum nodes alive to constitute an operational cluster
 echo "#### Prevent split brain ES Cluster n/2+1 ####" >> /etc/elasticsearch/elasticsearch.yml
-echo "#discovery.zen.minimum_master_nodes: 1" >> /etc/elasticsearch/elasticsearch.yml
+echo "discovery.zen.minimum_master_nodes: 2"
+echo "#" >> /etc/elasticsearch/elasticsearch.yml`
+echo 'discovery.zen.ping.unicast.hosts: ["ceelkes-ob-1p", "ceelkes-ob-2p", "elkes-ob-3p"]' >> /etc/elasticsearch/elasticsearch.yml
+echo "#discovery.zen.ping.multicast.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
+
 
 # Making changes to /etc/security/limits.conf to allow more open files for elasticsearch
 mv /etc/security/limits.conf /etc/security/limits.bak
@@ -87,7 +127,7 @@ echo "elasticsearch - memlock unlimited" >> /etc/security/limits.conf
 echo "# End of file" >> /etc/security/limits.conf
 
 # Modify elasticsearch service for ulimit -l unlimited to allow mlockall to work correctly
-sed -i -e 's|^#ES_HEAP_SIZE=2g|ES_HEAP_SIZE=2g|' /etc/init.d/elasticsearch
+sed -i -e 's|^#ES_HEAP_SIZE=2g|ES_HEAP_SIZE=16g|' /etc/init.d/elasticsearch
 sed -i -e 's|^#MAX_LOCKED_MEMORY=|MAX_LOCKED_MEMORY=unlimited|' /etc/init.d/elasticsearch
 
 # Set Elasticsearch to start on boot
@@ -117,8 +157,8 @@ pip install elasticsearch-curator
 # Create /etc/cron.daily/elasticsearch_curator Cron Job and send output to logstash tagged as curator
 tee -a /etc/cron.daily/elasticsearch_curator <<EOF
 #!/bin/sh
-curator delete --older-than 90 2>&1
-curator close --older-than 30 2>&1
+curator delete --older-than 6 2>&1
+curator close --older-than 5 2>&1
 curator bloom --older-than 2 2>&1
 curator optimize --older-than 2 2>&1
 

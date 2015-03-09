@@ -9,8 +9,8 @@ set -e
 # Setup logging
 # Logs stderr and stdout to separate files.
 mkdir /opt/collegis/software/logstash java elasticsearch kibana redis
-exec 2> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-broker-node.err")
-exec 1> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-broker-node.log")
+exec 2> >(tee "/opt/collegis/software/logstash/install_intake_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install_intake_node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"
@@ -105,12 +105,6 @@ input {
 }
 input {
         tcp {
-                type => "Netscaler"
-                port => "1517"
-        }
-}
-input {
-        tcp {
                 type => "eventlog"
                 port => "3515"
                 format => "json"
@@ -125,7 +119,7 @@ input {
 }
 output {
   redis {
-  host => "elkindex-ob-1p"
+  host => "ceelkred-ob-1p"
   data_type => "list"
   key => "logstash"
   }
@@ -139,24 +133,44 @@ tee -a /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.j
   "template" : "logstash-*",
   "settings" : {
     "index.refresh_interval" : "5s"
+    "index.number_of_shards" : 5,
+        "index.number_of_replicas" : 1,
+        "index.query.default_field" : "@message",
+        "index.routing.allocation.total_shards_per_node" : 3,
+        "index.auto_expand_replicas": false
   },
   "mappings" : {
-    "_default_" : {
-       "_all" : {"enabled" : true},
-       "dynamic_templates" : [ {
-         "string_fields" : {
-           "match" : "*",
-           "match_mapping_type" : "string",
-           "mapping" : {
-             "type" : "string", "index" : "analyzed", "omit_norms" : true,
-               "fields" : {
-                 "raw" : {"type": "string", "index" : "not_analyzed", "ignore_above" : 256}
-               }
-           }
-         }
-       } ],
-       "properties" : {
+    "_default_": {
+            "_all": { "enabled": false },
+            "_source": { "compress": false },
+            "dynamic_templates": [
+                {
+                    "fields_template" : {
+                        "mapping": { "type": "string", "index": "not_analyzed" },
+                        "path_match": "@fields.*"
+                    }
+                },
+                {
+                    "tags_template" : {
+                        "mapping": { "type": "string", "index": "not_analyzed" },
+                        "path_match": "@tags.*"
+                    }
+                }
+            ],
+         "properties" : {
          "@version": { "type": "string", "index": "not_analyzed" },
+         "@fields": { "type": "object", "dynamic": true, "path": "full" },
+         "@source" : { "type" : "string", "index" : "not_analyzed" },
+         "@source_host" : { "type" : "string", "index" : "not_analyzed" },
+         "@source_path" : { "type" : "string", "index" : "not_analyzed" },
+         "@timestamp" : { "type" : "date", "index" : "not_analyzed" },
+         "@type" : { "type" : "string", "index" : "not_analyzed" },
+         "@message" : { "type" : "string", "analyzer" : "whitespace" }
+             }
+        }
+    }
+}
+view raw
          "geoip"  : {
            "type" : "object",
              "dynamic": true,
@@ -193,17 +207,17 @@ EOF
 service logstash restart
 
 # Logrotate job for logstash
-#tee -a /etc/logrotate.d/logstash <<EOF
-#/var/log/logstash.log {
-#        monthly
-#        rotate 12
-#        compress
-#        delaycompress
-#        missingok
-#        notifempty
-#        create 644 root root
-#}
-#EOF
+tee -a /etc/logrotate.d/logstash <<EOF
+/var/log/logstash.log {
+        monthly
+        rotate 12
+        compress
+        delaycompress
+        missingok
+        notifempty
+        create 644 root root
+}
+EOF
 
 # All Done
 echo "Installation has completed!!"

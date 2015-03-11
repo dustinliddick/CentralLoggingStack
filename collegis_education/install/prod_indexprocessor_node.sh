@@ -17,8 +17,8 @@ set -e
 # Setup logging directories
 mkdir -p /opt/collegis/software/logstash/install
 # Logs stderr and stdout to separate files.
-exec 2> >(tee "/opt/collegis/software/logstash/install/install_Logstash-ELK-ES-Cluster-client-node.err")
-exec 1> >(tee "/opt/collegis/software/logstash/install/install_Logstash-ELK-ES-Cluster-client-node.log")
+exec 2> >(tee "/opt/collegis/software/logstash/install/install_indexprocessor_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install/install_indexprocessor_node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"

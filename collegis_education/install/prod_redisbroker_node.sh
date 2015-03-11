@@ -9,8 +9,8 @@ set -e
 # Setup logging
 # Logs stderr and stdout to separate files.
 mkdir /opt/collegis/software/logstash java elasticsearch kibana redis
-exec 2> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-broker-node.err")
-exec 1> >(tee "/opt/collegis/software/logstash/install_Logstash-ELK-ES-Cluster-broker-node.log")
+exec 2> >(tee "/opt/collegis/software/logstash/install_redisbroker_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install_redisbroker_node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"
@@ -32,24 +32,8 @@ echo "Your FQDN is currently ${red}$yourfqdn${NC}"
 echo "Detected IP Address is ${red}$IPADDY${NC}"
 sleep 10
 
-##################### Logstash Broker Setup ###########################################
+##################### Logstash Redis Broker Setup ###########################################
 
-# repo setup
-tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
-[logstash-1.4]
-name=logstash repository for 1.4.x packages
-baseurl=http://packages.elasticsearch.org/logstash/1.4/centos
-gpgcheck=1
-gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
-enabled=1
-
-[elasticsearch-1.0]
-name=Elasticsearch repository for 1.0.x packages
-baseurl=http://packages.elasticsearch.org/elasticsearch/1.0/centos
-gpgcheck=1
-gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
-enabled=1
-EOF
 
 # Register server with satellite
 curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash

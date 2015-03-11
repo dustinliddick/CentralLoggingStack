@@ -8,8 +8,8 @@ set -e
 # Setup logging
 # Logs stderr and stdout to separate files.
 mkdir -p /opt/collegis/software/logstash
-exec 2> >(tee "/opt/collegis/software/logstash/install_Logstash-ES-Cluster-Master-data-node.err")
-exec > >(tee "/opt/collegis/software/logstash/install_Logstash-ES-Cluster-Master-data-node.log")
+exec 2> >(tee "/opt/collegis/software/logstash/install_masterdata_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install_masterdata_node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"

@@ -1,9 +1,10 @@
 #!/bin/bash
 
 
-# This script configures the node as a intake node which will recieve loadbalanced syslogs from
-# the A10. This node is responsible for passing the syslogs to a redis broker on which
-# the indexing nodes will process the logs that will be sent to elasticsearch cluster
+# This script configures the node as a intake node which will recieve
+# loadbalanced syslogs from the A10. This node is responsible for passing the
+# syslogs to a redis broker on which the indexing nodes will process the logs
+# that will be sent to elasticsearch cluster.
 
 set -e
 # Setup logging

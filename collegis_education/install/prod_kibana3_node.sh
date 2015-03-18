@@ -1,4 +1,23 @@
 #!/bin/bash
+
+set -e
+# Setup logging directories
+mkdir -p /opt/collegis/software/logstash/install
+# Logs stderr and stdout to separate files.
+exec 2> >(tee "/opt/collegis/software/logstash/install/install_Logstash-ELK-ES-Cluster-client-node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install/install_Logstash-ELK-ES-Cluster-client-node.log")
+
+# Register server with satellite
+curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
+rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
+
+# update box
+yum -y --nogpgcheck update
+
+# install apache24
+yum -y install httpd24
+
 ### Install Kibana ###
 cd /opt/collegis/software
 mkdir kibana
@@ -6,39 +25,7 @@ cd kibana
 curl -O https://download.elasticsearch.org/kibana/kibana/kibana-3.0.1.tar.gz
 tar -xvf kibana-3.0.1.tar.gz
 vi /opt/collegis/software/kibana-3.0.1/config.js
-
-# In the Kibana configuration file, find the line that specifies the elasticsearch
-# server URL, and replace the port number (9200 by default) with 80:
-elasticsearch: "http://"+window.location.hostname+":80",
-
-# We will be using Apache to serve our Kibana installation, so let's move the files
-# into an appropriate location. Create a directory with the following command:
-mkdir -p /var/www/kibana3
-
-# Copy the Kibana files into your newly-created directory:
-cp -R /op/collegis/software/kibana-3.0.1/* /var/www/kibana3/
-
-
-### Install Apache HTTP ###
-yum install httpd
-cd /opt/collegis/software/kibana/
-wget https://assets.digitalocean.com/articles/logstash/kibana3.conf
-vi kibana3.conf
-
-# Edit virtual host file and change FQDN to server FQDN;
-# change `root` to where we installed Kibana
-# copy it to your Apache configuration configuration
-cp /opt/collegis/software/kibana/kibana3.conf /etc/httpd/conf.d/
-
-# Generate loging to access Kibana
-htpasswd -c /etc/httpd/conf.d/kibana-htpasswd `username`
-
-# Restart Apache to put changes into effect
-service httpd restart
-chkconfig httpd on
-## Install Apache HTTP Complete ###
-
-
+tee -a /opt/collegis/software/kibana-3.0.1/config.js <<EOF
 /** @scratch /configuration/config.js/1
  *
  * == Configuration
@@ -119,3 +106,30 @@ function (Settings) {
     ]
   });
 });
+EOF
+
+
+# We will be using Apache to serve our Kibana installation, so let's move the files
+# into an appropriate location. Create a directory with the following command:
+mkdir -p /var/www/kibana3
+
+# Copy the Kibana files into your newly-created directory:
+cp -R /op/collegis/software/kibana-3.0.1/* /opt/rh/httpd23/root/var/www/kibana3/
+
+
+cd /opt/collegis/software/kibana/
+wget https://assets.digitalocean.com/articles/logstash/kibana3.conf
+vi kibana3.conf
+
+# Edit virtual host file and change FQDN to server FQDN;
+# change `root` to where we installed Kibana
+# copy it to your Apache configuration configuration
+cp /opt/collegis/software/kibana/kibana3.conf /opt/rh/httpd24/root/etc/httpd/conf.d/
+
+# Generate loging to access Kibana
+htpasswd -c /etc/httpd/conf.d/kibana-htpasswd `username`
+
+# Restart Apache to put changes into effect
+service httpd24-httpd restart
+chkconfig httpd24-httpd on
+## Install Apache HTTP Complete ###

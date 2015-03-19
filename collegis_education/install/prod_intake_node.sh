@@ -3,13 +3,13 @@
 
 # This script configures the node as a intake node which will recieve
 # loadbalanced syslogs from the A10. This node is responsible for passing the
-# syslogs to a redis broker on which the indexing nodes will process the logs
-# that will be sent to elasticsearch cluster.
+# syslogs on to a redis broker on which the indexing nodes will pull and
+# process the logs that will be sent to elasticsearch cluster.
 
 set -e
 # Setup logging
 # Logs stderr and stdout to separate files.
-mkdir /opt/collegis/software/logstash java elasticsearch kibana redis
+mkdir /opt/collegis/software/logstash java
 exec 2> >(tee "/opt/collegis/software/logstash/install_intake_node.err")
 exec 1> >(tee "/opt/collegis/software/logstash/install_intake_node.log")
 
@@ -56,9 +56,6 @@ EOF
 curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
 rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
 rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
-
-# update box
-yum -y --nogpgcheck update
 
 # Install Oracle Java 8
 echo "Installing Oracle Java 8"

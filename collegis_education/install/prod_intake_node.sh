@@ -9,7 +9,7 @@
 set -e
 # Setup logging
 # Logs stderr and stdout to separate files.
-mkdir /opt/collegis/software/logstash java
+mkdir -p /opt/collegis/software/logstash java
 exec 2> >(tee "/opt/collegis/software/logstash/install_intake_node.err")
 exec 1> >(tee "/opt/collegis/software/logstash/install_intake_node.log")
 

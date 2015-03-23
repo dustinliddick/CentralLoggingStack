@@ -1,3 +1,175 @@
+#!/bin/bash
+
+#Provided by @mrlesmithjr at EveryThingShouldBeVirtual.com
+#Modified by Dustin Liddick for CollegisEducation
+# This script configures the node as a processor node which will filter syslogs
+# comming from the redis broker. This node is responsible for the heavy lifting;
+# applying grok filters to the syslogs which will then be sent to the
+# elasticsearch cluster
+
+# This script configures the node as a logstash indexer, Elasticsearch client
+# node in logstash-cluster
+
+############
+# PRE-WORK #
+############
+set -e
+# Setup logging directories
+mkdir -p /opt/collegis/software/logstash/install
+# Logs stderr and stdout to separate files.
+exec 2> >(tee "/opt/collegis/software/logstash/install/install_indexprocessor_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install/install_indexprocessor_node.log")
+
+# Setting colors for output
+red="$(tput setaf 1)"
+yellow="$(tput bold ; tput setaf 3)"
+NC="$(tput sgr0)"
+
+# repo setup
+tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
+[logstash-1.4]
+name=logstash repository for 1.4.x packages
+baseurl=http://packages.elasticsearch.org/logstash/1.4/centos
+gpgcheck=1
+gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
+enabled=1
+
+[elasticsearch-1.0]
+name=Elasticsearch repository for 1.0.x packages
+baseurl=http://packages.elasticsearch.org/elasticsearch/1.0/centos
+gpgcheck=1
+gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
+enabled=1
+EOF
+
+# Register server with satellite
+curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
+rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
+
+# Install Oracle Java 8
+echo "Installing Oracle Java 8"
+mkdir /opt/collegis/software/java
+cd /opt/collegis/software/java
+wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u20-b26/jdk-8u20-linux-x64.tar.gz"
+tar -zxvf jdk-8u20-linux-x64.tar.gz
+update-alternatives --install /usr/bin/java java /opt/collegis/software/java/jdk1.8.0_20/bin/java 2
+
+###########
+# END PRE #
+###########
+
+
+#################
+# START INSTALL #
+#################
+# Capture your FQDN Domain Name and IP Address
+echo "${yellow}Capturing your hostname${NC}"
+yourhostname=$(hostname)
+echo "${yellow}Capturing your domain name${NC}"
+yourdomainname=$(dnsdomainname)
+echo "${yellow}Capturing your FQDN${NC}"
+yourfqdn=$(hostname -f)
+echo "${yellow}Detecting IP Address${NC}"
+IPADDY="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+echo "Your hostname is currently ${red}$yourhostname${NC}"
+echo "Your domain name is currently ${red}$yourdomainname${NC}"
+echo "Your FQDN is currently ${red}$yourfqdn${NC}"
+echo "Detected IP Address is ${red}$IPADDY${NC}"
+sleep 10
+
+##########################
+# Logstash Indexer Setup #
+##########################
+
+
+##################### Logstash Front-End Setup #################################
+
+# Install Logstash
+yum install -y --nogpgcheck logstash
+/opt/logstash/bin/plugin install contrib
+
+# Enable logstash start on bootup
+chkconfig logstash on
+
+# Update elasticsearch-template for logstash
+mv /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json.orig
+tee -a /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json <<EOF
+{
+  "template" : "logstash-*",
+  "settings" : {
+    "index.refresh_interval" : "5s"
+    "index.number_of_shards" : 5,
+        "index.number_of_replicas" : 1,
+        "index.query.default_field" : "@message",
+        "index.routing.allocation.total_shards_per_node" : 3,
+        "index.auto_expand_replicas": false
+  },
+  "mappings" : {
+    "_default_": {
+            "_all": { "enabled": false },
+            "_source": { "compress": false },
+            "dynamic_templates": [
+                {
+                    "fields_template" : {
+                        "mapping": { "type": "string", "index": "not_analyzed" },
+                        "path_match": "@fields.*"
+                    }
+                },
+                {
+                    "tags_template" : {
+                        "mapping": { "type": "string", "index": "not_analyzed" },
+                        "path_match": "@tags.*"
+                    }
+                }
+            ],
+         "properties" : {
+         "@version": { "type": "string", "index": "not_analyzed" },
+         "@fields": { "type": "object", "dynamic": true, "path": "full" },
+         "@source" : { "type" : "string", "index" : "not_analyzed" },
+         "@source_host" : { "type" : "string", "index" : "not_analyzed" },
+         "@source_path" : { "type" : "string", "index" : "not_analyzed" },
+         "@timestamp" : { "type" : "date", "index" : "not_analyzed" },
+         "@type" : { "type" : "string", "index" : "not_analyzed" },
+         "@message" : { "type" : "string", "analyzer" : "whitespace" }
+             }
+        }
+    }
+}
+view raw
+         "geoip"  : {
+           "type" : "object",
+             "dynamic": true,
+             "path": "full",
+             "properties" : {
+               "location" : { "type" : "geo_point" }
+             }
+         },
+        "actconn": { "type": "long", "index": "not_analyzed" },
+        "backend_queue": { "type": "long", "index": "not_analyzed" },
+        "beconn": { "type": "long", "index": "not_analyzed" },
+        "bytes": { "type": "long", "index": "not_analyzed" },
+        "bytes_read": { "type": "long", "index": "not_analyzed" },
+        "datastore_latency_from": { "type": "long", "index": "not_analyzed" },
+        "datastore_latency_to": { "type": "long", "index": "not_analyzed" },
+        "feconn": { "type": "long", "index": "not_analyzed" },
+        "response_time": { "type": "long", "index": "not_analyzed" },
+        "retries": { "type": "long", "index": "not_analyzed" },
+        "srv_queue": { "type": "long", "index": "not_analyzed" },
+        "srvconn": { "type": "long", "index": "not_analyzed" },
+        "time_backend_connect": { "type": "long", "index": "not_analyzed" },
+        "time_backend_response": { "type": "long", "index": "not_analyzed" },
+        "time_duration": { "type": "long", "index": "not_analyzed" },
+        "time_queue": { "type": "long", "index": "not_analyzed" },
+        "time_request": { "type": "long", "index": "not_analyzed" }
+       }
+    }
+  }
+}
+EOF
+
+# Create Logstash configuration file
+tee -a /etc/logstash/conf.d/logstash.conf <<EOF
 #########
 # INPUT #
 #########
@@ -6,6 +178,7 @@ input {
                 host => "10.38.2.65"
                 data_type => "list"
                 key => "logstash"
+                threads => 8
         }
 }
 ########################
@@ -18,9 +191,9 @@ filter {
                 }
         }
         if [type] == "firewall" {
-        		mutate {
-        				add_tag => [ "cisco-asa" ]
-        		}
+                        mutate {
+                                        add_tag => [ "cisco-asa" ]
+                        }
         }
         if [type] == "VMware" {
                 mutate {
@@ -110,69 +283,69 @@ filter {
 # Cisco ASA #
 #############
 filter {
-		if "cisco-asa" in [tags] {
-				grok {
-					patterns_dir => "/opt/logstash/patterns"
-					break_on_match => false
-    				match => [ "message", "%{CISCO_TAGGED_SYSLOG}"
-    					]
-				}
-				grok {
-					match => [
-					"message", "%{CISCOFW106001}",
-					"message", "%{CISCOFW106006_106007_106010}",
-					"message", "%{CISCOFW106014}",
-					"message", "%{CISCOFW106015}",
-					"message", "%{CISCOFW106021}",
-					"message", "%{CISCOFW106023}",
-					"message", "%{CISCOFW106100}",
-					"message", "%{CISCOFW110002}",
-					"message", "%{CISCOFW302010}",
-					"message", "%{CISCOFW302013_302014_302015_302016}",
-					"message", "%{CISCOFW302020_302021}",
-					"message", "%{CISCOFW305011}",
-					"message", "%{CISCOFW313001_313004_313008}",
-					"message", "%{CISCOFW313005}",
-					"message", "%{CISCOFW402117}",
-					"message", "%{CISCOFW402119}",
-					"message", "%{CISCOFW419001}",
-					"message", "%{CISCOFW419002}",
-					"message", "%{CISCOFW500004}",
-					"message", "%{CISCOFW602303_602304}",
-					"message", "%{CISCOFW710001_710002_710003_710005_710006}",
-					"message", "%{CISCOFW713172}",
-					"message", "%{CISCOFW733100}"
-					]
-				}
- 				geoip {
-  					#type => "stingray"
-  					add_tag => [ "geoip" ]
-  					source => "src_ip"
-  					database => "/opt/logstash/vendor/geoip/GeoLiteCity.dat"
- 				}
+                if "cisco-asa" in [tags] {
+                                grok {
+                                        patterns_dir => "/opt/logstash/patterns"
+                                        break_on_match => false
+                                match => [ "message", "%{CISCO_TAGGED_SYSLOG}"
+                                        ]
+                                }
+                                grok {
+                                        match => [
+                                        "message", "%{CISCOFW106001}",
+                                        "message", "%{CISCOFW106006_106007_106010}",
+                                        "message", "%{CISCOFW106014}",
+                                        "message", "%{CISCOFW106015}",
+                                        "message", "%{CISCOFW106021}",
+                                        "message", "%{CISCOFW106023}",
+                                        "message", "%{CISCOFW106100}",
+                                        "message", "%{CISCOFW110002}",
+                                        "message", "%{CISCOFW302010}",
+                                        "message", "%{CISCOFW302013_302014_302015_302016}",
+                                        "message", "%{CISCOFW302020_302021}",
+                                        "message", "%{CISCOFW305011}",
+                                        "message", "%{CISCOFW313001_313004_313008}",
+                                        "message", "%{CISCOFW313005}",
+                                        "message", "%{CISCOFW402117}",
+                                        "message", "%{CISCOFW402119}",
+                                        "message", "%{CISCOFW419001}",
+                                        "message", "%{CISCOFW419002}",
+                                        "message", "%{CISCOFW500004}",
+                                        "message", "%{CISCOFW602303_602304}",
+                                        "message", "%{CISCOFW710001_710002_710003_710005_710006}",
+                                        "message", "%{CISCOFW713172}",
+                                        "message", "%{CISCOFW733100}"
+                                        ]
+                                }
+                                geoip {
+                                        #type => "stingray"
+                                        add_tag => [ "geoip" ]
+                                        source => "src_ip"
+                                        database => "/opt/logstash/vendor/geoip/GeoLiteCity.dat"
+                                }
 }
-				mutate {
-  					tags => [ "geoip" ]
-  						# 'coords' will be kept, 'tmplat' is temporary.
-  						# Both of these new fields are strings.
-  					add_field => [ "coords", "%{geoip.longitude}",
-                 				"tmplat", "%{geoip.latitude}" ]
- 				}
- 				mutate {
-  					tags => [ "geoip" ]
-  						# Merge 'tmplat' into 'coords'
-  					merge => [ "coords", "tmplat" ]
- 				}
- 				mutate {
-  					tags => [ "geoip" ]
-  						# Convert our new array of strings back to float
-  						convert => [ "coords", "float" ]
-  						# Delete our temporary latitude field
-  					remove => [ "tmplat" ]
- 				}
+                                mutate {
+                                        tags => [ "geoip" ]
+                                                # 'coords' will be kept, 'tmplat' is temporary.
+                                                # Both of these new fields are strings.
+                                        add_field => [ "coords", "%{geoip.longitude}",
+                                                "tmplat", "%{geoip.latitude}" ]
+                                }
+                                mutate {
+                                        tags => [ "geoip" ]
+                                                # Merge 'tmplat' into 'coords'
+                                        merge => [ "coords", "tmplat" ]
+                                }
+                                mutate {
+                                        tags => [ "geoip" ]
+                                                # Convert our new array of strings back to float
+                                                convert => [ "coords", "float" ]
+                                                # Delete our temporary latitude field
+                                        remove => [ "tmplat" ]
+                                }
 #Takes the 4-tuple of source address, destination address, destination port, and protocol and does a SHA1 hash to fingerprint the flow.  This is a useful
 #way to be able to do top N terms queries on flows, not just on one field.
-	if "cisco-asa" in [tags] and [src_ip] and [dst_ip] {
+        if "cisco-asa" in [tags] and [src_ip] and [dst_ip] {
       fingerprint {
         concatenate_sources => true
         method => "SHA1"
@@ -180,54 +353,54 @@ filter {
         source => [ "src_ip", "dst_ip", "dst_port", "protocol" ]
       }
     }
-	if [geoip][city_name] == "" { mutate { remove_field => "[geoip][city_name]" } }
-	if [geoip][continent_code] == "" { mutate { remove_field => "[geoip][continent_code]" } }
-	if [geoip][country_code2] == "" { mutate { remove_field => "[geoip][country_code2]" } }
-	if [geoip][country_code3] == "" { mutate { remove_field => "[geoip][country_code3]" } }
-	if [geoip][country_name] == "" { mutate { remove_field => "[geoip][country_name]" } }
-	if [geoip][latitude] == "" { mutate { remove_field => "[geoip][latitude]" } }
-	if [geoip][longitude] == "" { mutate { remove_field => "[geoip][longitude]" } }
-	if [geoip][postal_code] == "" { mutate { remove_field => "[geoip][postal_code]" } }
-	if [geoip][region_name] == "" { mutate { remove_field => "[geoip][region_name]" } }
-	if [geoip][time_zone] == "" { mutate { remove_field => "[geoip][time_zone]" } }
+        if [geoip][city_name] == "" { mutate { remove_field => "[geoip][city_name]" } }
+        if [geoip][continent_code] == "" { mutate { remove_field => "[geoip][continent_code]" } }
+        if [geoip][country_code2] == "" { mutate { remove_field => "[geoip][country_code2]" } }
+        if [geoip][country_code3] == "" { mutate { remove_field => "[geoip][country_code3]" } }
+        if [geoip][country_name] == "" { mutate { remove_field => "[geoip][country_name]" } }
+        if [geoip][latitude] == "" { mutate { remove_field => "[geoip][latitude]" } }
+        if [geoip][longitude] == "" { mutate { remove_field => "[geoip][longitude]" } }
+        if [geoip][postal_code] == "" { mutate { remove_field => "[geoip][postal_code]" } }
+        if [geoip][region_name] == "" { mutate { remove_field => "[geoip][region_name]" } }
+        if [geoip][time_zone] == "" { mutate { remove_field => "[geoip][time_zone]" } }
 # Parse the date
-				date {
- 					match => ["timestamp",
- 								"MMM dd HH:mm:ss",
-								"MMM d HH:mm:ss",
-								"MMM dd yyyy HH:mm:ss",
-								"MMM d yyyy HH:mm:ss"
-								]
-				}
-			}
-############################
+                                date {
+                                        match => ["timestamp",
+                                                                "MMM dd HH:mm:ss",
+                                                                "MMM d HH:mm:ss",
+                                                                "MMM dd yyyy HH:mm:ss",
+                                                                "MMM d yyyy HH:mm:ss"
+                                                                ]
+                                }
+                        }
+                        ############################
 # Second pass at filtering #
 ############################
 ## RHEL login filter ##
 #filter {
-#		if [tag] == "syslog" {
-#				grok {
-#  						type => "syslog"
-#  						match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for invalid user %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
-#  						add_tag => "ssh_brute_force_attack"
-#					}
-#				grok {
-#  						type => "syslog"
-#  						match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sudo: pam_unix\(sudo:auth\): authentication failure; logname=%{USERNAME:logname} uid=%{BASE10NUM:uid} euid=%{BASE10NUM:euid} tty=%{TTY:tty} ruser=%{USERNAME:ruser} rhost=(?:%{HOSTNAME:remote_host}|\s*) user=%{USERNAME:user}"
-#  						add_tag => "sudo_auth_failure"
-#  					}
-#				grok {
-#  						type => "syslog"
-#  						match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
-#  						add_tag => "ssh_failed_login"
-#					}
-#				grok {
-#  						type => "syslog"
-#  						match => "messge", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Accepted password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
-#  						add_tag => "ssh_sucessful_login"
-#					}
-#			}
-#	}
+#               if [tag] == "syslog" {
+#                               grok {
+#                                               type => "syslog"
+#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for invalid user %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
+#                                               add_tag => "ssh_brute_force_attack"
+#                                       }
+#                               grok {
+#                                               type => "syslog"
+#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sudo: pam_unix\(sudo:auth\): authentication failure; logname=%{USERNAME:logname} uid=%{BASE10NUM:uid} euid=%{BASE10NUM:euid} tty=%{TTY:tty} ruser=%{USERNAME:ruser} rhost=(?:%{HOSTNAME:remote_host}|\s*) user=%{USERNAME:user}"
+#                                               add_tag => "sudo_auth_failure"
+#                                       }
+#                               grok {
+#                                               type => "syslog"
+#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
+#                                               add_tag => "ssh_failed_login"
+#                                       }
+#                               grok {
+#                                               type => "syslog"
+#                                               match => "messge", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Accepted password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
+#                                               add_tag => "ssh_sucessful_login"
+#                                       }
+#                       }
+#       }
 ############################
 # Nagios Filter for alerts #
 ############################
@@ -286,3 +459,31 @@ if "nagios_check_syslog_test" in [tags] {
                 }
         }
 }
+EOF
+
+
+# Restart logstash service
+service logstash restart
+
+# Logrotate job for logstash
+tee -a /etc/logrotate.d/logstash <<EOF
+/var/log/logstash.log {
+        monthly
+        rotate 12
+        compress
+        delaycompress
+        missingok
+        notifempty
+        create 644 root root
+}
+EOF
+
+
+# All Done
+echo "${yellow}Installation has completed!!${NC}"
+echo -e "${yellow}To connect to kibana web-frontend connect to:${NC}"
+echo -e "${red}http://elkstack.deltakedu.corp${NC}"
+echo ""
+echo "${yellow}CollegisEducation.com${NC}"
+echo "${yellow}Dustin Liddick${NC}"
+echo "${yellow}Enjoy!!!${NC}"

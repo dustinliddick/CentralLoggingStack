@@ -42,10 +42,6 @@ gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1
 EOF
 
-# Register server with satellite
-curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
-rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
-rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
 
 # Install Oracle Java 8
 echo "Installing Oracle Java 8"

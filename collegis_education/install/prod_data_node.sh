@@ -33,12 +33,6 @@ sleep 15
 
 
 ############################### Logstash - Elasticsearch cluster Setup ##################################
-# Install Pre-Reqs
-
-# Register server with satellite
-curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
-rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
-rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
 
 tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
 [logstash-1.4]
@@ -55,6 +49,10 @@ gpgcheck=1
 gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1
 EOF
+
+############################### Logstash - Elasticsearch cluster Setup ##################################
+# Register server with satellite
+rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
 
 # Install Oracle Java 8
 echo "Installing Oracle Java 8"
@@ -91,7 +89,7 @@ echo "elasticsearch - memlock unlimited" >> /etc/security/limits.conf
 echo "# End of file" >> /etc/security/limits.conf
 
 # Modify elasticsearch service for ulimit -l unlimited to allow mlockall to work correctly
-sed -i -e 's|^#ES_HEAP_SIZE=2g|ES_HEAP_SIZE=2g|' /etc/init.d/elasticsearch
+sed -i -e 's|^#ES_HEAP_SIZE=2g|ES_HEAP_SIZE=6g|' /etc/init.d/elasticsearch
 sed -i -e 's|^#MAX_LOCKED_MEMORY=|MAX_LOCKED_MEMORY=unlimited|' /etc/init.d/elasticsearch
 
 # Set Elasticsearch to start on boot
@@ -106,7 +104,7 @@ service elasticsearch restart
 
 # Install elasticsearch Marvel Plugin Details http://www.elasticsearch.org/overview/marvel/
 # To view these stats connect to http://logstashFQDNorIP:9200/_plugin/marvel
-/usr/share/elasticsearch/bin/plugin -i elasticsearch/marvel/latest
+#/usr/share/elasticsearch/bin/plugin -i elasticsearch/marvel/latest
 
 # Install other elasticsearch plugins
 # To view paramedic connect to http://logstashFQDNorIP:9200/_plugin/paramedic/index.html

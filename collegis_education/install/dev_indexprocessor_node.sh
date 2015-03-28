@@ -171,7 +171,7 @@ tee -a /etc/logstash/conf.d/logstash.conf <<EOF
 #########
 input {
         redis {
-                host => "10.38.2.65"
+                host => "172.16.7.232"
                 data_type => "list"
                 key => "logstash"
                 threads => 8
@@ -369,7 +369,7 @@ filter {
                                                                 ]
                                 }
                         }
-                        ############################
+############################
 # Second pass at filtering #
 ############################
 ## RHEL login filter ##
@@ -435,11 +435,12 @@ filter {
 
 output {
         elasticsearch {
-                cluster => "logstash-cluster"
-                host => "elkes-ob-4p"
+                cluster => "prod_es_cluster"
+                host => "ceelkes-ob-1p"
                 port => "9300"
                 protocol => "node"
                 flush_size => 1
+                workers =>
                 manage_template => true
                 template => "/opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json"
         }

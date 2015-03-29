@@ -83,7 +83,7 @@ sleep 10
 
 # Install Logstash
 yum install -y --nogpgcheck logstash
-/opt/logstash/bin/plugin install contrib
+#/opt/logstash/bin/plugin install contrib
 
 # Enable logstash start on bootup
 chkconfig logstash on
@@ -436,25 +436,25 @@ filter {
 output {
         elasticsearch {
                 cluster => "prod_es_cluster"
-                host => "ceelkes-ob-1p"
+                host => "ceelkes-ob-3p"
                 port => "9300"
                 protocol => "node"
                 flush_size => 1
-                workers =>
+                workers => 8
                 manage_template => true
                 template => "/opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json"
         }
-if "nagios_check_syslog_test" in [tags] {
-        nagios_nsca {
-                host => "10.8.31.12"
-                port => 5667
-                send_nsca_bin => "/opt/collegis/software/nagios/nsca-2.9.1/src/send_nsca"
-                nagios_host => "localhost"
-                nagios_service => "LogstashAlertTest"
-                nagios_status => 2
-                message_format => "%{SYSLOGTIME}  %{SYSLOGHOST}"
-                }
-        }
+#if "nagios_check_syslog_test" in [tags] {
+#        nagios_nsca {
+#                host => "10.8.31.12"
+#                port => 5667
+#                send_nsca_bin => "/opt/collegis/software/nagios/nsca-2.9.1/src/send_nsca"
+#                nagios_host => "localhost"
+#                nagios_service => "LogstashAlertTest"
+#                nagios_status => 2
+#                message_format => "%{SYSLOGTIME}  %{SYSLOGHOST}"
+#                }
+#        }
 }
 EOF
 

@@ -67,7 +67,7 @@ yum install -y --nogpgcheck elasticsearch
 
 # Configuring Elasticsearch
 echo "### Below is added using install script ###" >> /etc/elasticsearch/elasticsearch.yml
-echo "cluster.name: es_cluster" >> /etc/elasticsearch/elasticsearch.yml
+echo "cluster.name: prod_es_cluster" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.name: $yourhostname" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.master: false" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.data: true" >> /etc/elasticsearch/elasticsearch.yml
@@ -75,7 +75,7 @@ echo "index.number_of_shards: 5" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_replicas: 1" >> /etc/elasticsearch/elasticsearch.yml
 echo "bootstrap.mlockall: true" >> /etc/elasticsearch/elasticsearch.yml
 echo "##### Uncomment below instead of using multicast and update with your actual ES Master/Data nodenames #####" >> /etc/elasticsearch/elasticsearch.yml
-echo 'discovery.zen.ping.unicast.hosts: ["ceelkes-ob-1p", "ceelkes-ob-2p", "elkes-ob-3p"]' >> /etc/elasticsearch/elasticsearch.yml
+echo 'discovery.zen.ping.unicast.hosts: ["ceelkes-ob-1p", "ceelkes-ob-2p", "elkes-ob-3p", "elkes-ob-4p", "elkes-ob-5p"]' >> /etc/elasticsearch/elasticsearch.yml
 echo "#discovery.zen.ping.multicast.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
 echo "#### Prevent split brain ES Cluster n/2+1 ####" >> /etc/elasticsearch/elasticsearch.yml
 echo "#discovery.zen.minimum_master_nodes: 1" >> /etc/elasticsearch/elasticsearch.yml
@@ -119,8 +119,8 @@ pip install elasticsearch-curator
 # Create /etc/cron.daily/elasticsearch_curator Cron Job and send output to logstash tagged as curator
 tee -a /etc/cron.daily/elasticsearch_curator <<EOF
 #!/bin/sh
-curator delete --older-than 6 2>&1
-curator close --older-than 5 2>&1
+curator delete --older-than 8 2>&1
+curator close --older-than 4 2>&1
 curator bloom --older-than 2 2>&1
 curator optimize --older-than 2 2>&1
 

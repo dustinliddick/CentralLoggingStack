@@ -33,12 +33,8 @@ sleep 15
 
 
 ############################### Logstash - Elasticsearch cluster Setup ##################################
-# Install Pre-Reqs
-
 # Register server with satellite
-curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
 rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
-rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
 
 tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
 [logstash-1.4]
@@ -56,6 +52,10 @@ gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1
 EOF
 
+# Register server with satellite
+rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
+sleep 10
+
 # Install Oracle Java 8
 echo "Installing Oracle Java 8"
 mkdir /opt/collegis/software/java
@@ -64,6 +64,7 @@ wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2F
 tar -zxvf jdk-8u20-linux-x64.tar.gz
 update-alternatives --install /usr/bin/java java /opt/collegis/software/java/jdk1.8.0_20/bin/java 2
 
+
 # Install Elasticsearch
 yum install -y --nogpgcheck elasticsearch
 
@@ -71,7 +72,7 @@ yum install -y --nogpgcheck elasticsearch
 echo "### Below is added using install script ###" >> /etc/elasticsearch/elasticsearch.yml
 
 # Node name
-echo "cluster.name: es_cluster" >> /etc/elasticsearch/elasticsearch.yml
+echo "cluster.name: prod_es_cluster" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.name: $yourhostname" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.datacenter: latisys" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.master: true" >> /etc/elasticsearch/elasticsearch.yml
@@ -79,6 +80,7 @@ echo "node.data: true" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_shards: 5" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_replicas: 1" >> /etc/elasticsearch/elasticsearch.yml
 echo "bootstrap.mlockall: true" >> /etc/elasticsearch/elasticsearch.yml
+
 ## Threadpool Settings ##
 # Search pool
 echo "threadpool.search.type: fixed" >> /etc/elasticsearch/elasticsearch.yml
@@ -112,9 +114,9 @@ echo "index.translog.flush_threshold_ops: 50000" >> /etc/elasticsearch/elasticse
 
 # Minimum nodes alive to constitute an operational cluster
 echo "#### Prevent split brain ES Cluster n/2+1 ####" >> /etc/elasticsearch/elasticsearch.yml
-echo "discovery.zen.minimum_master_nodes: 2"
+echo "discovery.zen.minimum_master_nodes: 2" >> /etc/elasticsearch/elasticsearch.yml
 echo "#" >> /etc/elasticsearch/elasticsearch.yml`
-echo 'discovery.zen.ping.unicast.hosts: ["ceelkes-ob-1p", "ceelkes-ob-2p", "elkes-ob-3p"]' >> /etc/elasticsearch/elasticsearch.yml
+echo 'discovery.zen.ping.unicast.hosts: ["ceelkes-ob-1p", "ceelkes-ob-2p", "elkes-ob-3p", "elkes-ob-4p", "elkes-ob-5p"]' >> /etc/elasticsearch/elasticsearch.yml
 echo "#discovery.zen.ping.multicast.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
 
 
@@ -151,14 +153,14 @@ service elasticsearch restart
 /usr/share/elasticsearch/bin/plugin -install mobz/elasticsearch-head
 
 # Install elasticsearch curator http://www.elasticsearch.org/blog/curator-tending-your-time-series-indices/
-yum install -y --nogpgcheck python-pip
+yum install --nogpgcheck -y python-pip
 pip install elasticsearch-curator
 
 # Create /etc/cron.daily/elasticsearch_curator Cron Job and send output to logstash tagged as curator
 tee -a /etc/cron.daily/elasticsearch_curator <<EOF
 #!/bin/sh
-curator delete --older-than 6 2>&1
-curator close --older-than 5 2>&1
+curator delete --older-than 8 2>&1
+curator close --older-than 4 2>&1
 curator bloom --older-than 2 2>&1
 curator optimize --older-than 2 2>&1
 
@@ -178,17 +180,7 @@ EOF
 chmod +x /etc/cron.daily/elasticsearch_curator
 
 # Logrotate job for elasticsearch_curator
-tee -a /etc/logrotate.d/elasticsearch_curator <<EOF
-/var/log/elasticsearch_curator.log {
-        monthly
-        rotate 12
-        compress
-        delaycompress
-        missingok
-        notifempty
-        create 644 root root
-}
-EOF
+
 
 # All Done
 echo "Installation has completed!!"

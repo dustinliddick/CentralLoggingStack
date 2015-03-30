@@ -112,7 +112,7 @@ echo "index.translog.flush_threshold_ops: 50000" >> /etc/elasticsearch/elasticse
 # Minimum nodes alive to constitute an operational cluster
 echo "#### Prevent split brain ES Cluster n/2+1 ####" >> /etc/elasticsearch/elasticsearch.yml
 echo "discovery.zen.minimum_master_nodes: 2" >> /etc/elasticsearch/elasticsearch.yml
-echo "#" >> /etc/elasticsearch/elasticsearch.yml`
+echo "#" >> /etc/elasticsearch/elasticsearch.yml
 echo 'discovery.zen.ping.unicast.hosts: ["ceelkes-ob-1p", "ceelkes-ob-2p", "elkes-ob-3p", "elkes-ob-4p", "elkes-ob-5p"]' >> /etc/elasticsearch/elasticsearch.yml
 echo "#discovery.zen.ping.multicast.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
 

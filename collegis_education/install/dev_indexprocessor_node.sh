@@ -14,16 +14,56 @@
 # PRE-WORK #
 ############
 set -e
-# Setup logging directories
-mkdir -p /opt/collegis/software/logstash/install
+# Setup logging
 # Logs stderr and stdout to separate files.
-exec 2> >(tee "/opt/collegis/software/logstash/install/install_indexprocessor_node.err")
-exec 1> >(tee "/opt/collegis/software/logstash/install/install_indexprocessor_node.log")
+mkdir -p /opt/collegis/software/logstash java
+exec 2> >(tee "/opt/collegis/software/logstash/install_index_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install_index_node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"
 yellow="$(tput bold ; tput setaf 3)"
 NC="$(tput sgr0)"
+
+# Capture your FQDN Domain Name and IP Address
+echo "${yellow}Capturing your hostname${NC}"
+yourhostname=$(hostname)
+echo "${yellow}Capturing your domain name${NC}"
+yourdomainname=$(dnsdomainname)
+echo "${yellow}Capturing your FQDN${NC}"
+yourfqdn=$(hostname -f)
+echo "${yellow}Detecting IP Address${NC}"
+IPADDY="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+echo "Your hostname is currently ${red}$yourhostname${NC}"
+echo "Your domain name is currently ${red}$yourdomainname${NC}"
+echo "Your FQDN is currently ${red}$yourfqdn${NC}"
+echo "Detected IP Address is ${red}$IPADDY${NC}"
+sleep 10
+
+echo "adding new database to satelite server"
+curl http://il1satsvr01.deltakedu.corp/pub/scripts/install/plain/AddSatelliteServerToHostFile.sh | /bin/bash
+sleep 5
+echo ""
+echo ""
+echo "${red}checking see status of hostname adition${NC}"
+cat /etc/hosts
+echo ""
+echo ""
+echo "now sleeping after satelite hostfile addition for 10s"
+sleep 10
+########################################################################################################################################################
+##                    ##################################################################################################################################
+## PRE-INSTALL STEPS  ##################################################################################################################################
+##                    ##################################################################################################################################
+########################################################################################################################################################
+# Register Server to satellite server
+curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
+
+# Modify subscription channels for server in satellite
+rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
+echo "satalitte server configureation done"
+echo ""
+sleep 4
 
 # repo setup
 tee -a /etc/yum.repos.d/elk-stack.repo <<EOF
@@ -42,7 +82,6 @@ gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1
 EOF
 
-
 # Install Oracle Java 8
 echo "Installing Oracle Java 8"
 mkdir /opt/collegis/software/java
@@ -50,29 +89,6 @@ cd /opt/collegis/software/java
 wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u20-b26/jdk-8u20-linux-x64.tar.gz"
 tar -zxvf jdk-8u20-linux-x64.tar.gz
 update-alternatives --install /usr/bin/java java /opt/collegis/software/java/jdk1.8.0_20/bin/java 2
-
-###########
-# END PRE #
-###########
-
-
-#################
-# START INSTALL #
-#################
-# Capture your FQDN Domain Name and IP Address
-echo "${yellow}Capturing your hostname${NC}"
-yourhostname=$(hostname)
-echo "${yellow}Capturing your domain name${NC}"
-yourdomainname=$(dnsdomainname)
-echo "${yellow}Capturing your FQDN${NC}"
-yourfqdn=$(hostname -f)
-echo "${yellow}Detecting IP Address${NC}"
-IPADDY="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
-echo "Your hostname is currently ${red}$yourhostname${NC}"
-echo "Your domain name is currently ${red}$yourdomainname${NC}"
-echo "Your FQDN is currently ${red}$yourfqdn${NC}"
-echo "Detected IP Address is ${red}$IPADDY${NC}"
-sleep 10
 
 ##########################
 # Logstash Indexer Setup #
@@ -88,82 +104,6 @@ yum install -y --nogpgcheck logstash
 # Enable logstash start on bootup
 chkconfig logstash on
 
-# Update elasticsearch-template for logstash
-mv /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json.orig
-tee -a /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json <<EOF
-{
-  "template" : "logstash-*",
-  "settings" : {
-    "index.refresh_interval" : "5s"
-    "index.number_of_shards" : 5,
-        "index.number_of_replicas" : 1,
-        "index.query.default_field" : "@message",
-        "index.routing.allocation.total_shards_per_node" : 3,
-        "index.auto_expand_replicas": false
-  },
-  "mappings" : {
-    "_default_": {
-            "_all": { "enabled": false },
-            "_source": { "compress": false },
-            "dynamic_templates": [
-                {
-                    "fields_template" : {
-                        "mapping": { "type": "string", "index": "not_analyzed" },
-                        "path_match": "@fields.*"
-                    }
-                },
-                {
-                    "tags_template" : {
-                        "mapping": { "type": "string", "index": "not_analyzed" },
-                        "path_match": "@tags.*"
-                    }
-                }
-            ],
-         "properties" : {
-         "@version": { "type": "string", "index": "not_analyzed" },
-         "@fields": { "type": "object", "dynamic": true, "path": "full" },
-         "@source" : { "type" : "string", "index" : "not_analyzed" },
-         "@source_host" : { "type" : "string", "index" : "not_analyzed" },
-         "@source_path" : { "type" : "string", "index" : "not_analyzed" },
-         "@timestamp" : { "type" : "date", "index" : "not_analyzed" },
-         "@type" : { "type" : "string", "index" : "not_analyzed" },
-         "@message" : { "type" : "string", "analyzer" : "whitespace" }
-             }
-        }
-    }
-}
-view raw
-         "geoip"  : {
-           "type" : "object",
-             "dynamic": true,
-             "path": "full",
-             "properties" : {
-               "location" : { "type" : "geo_point" }
-             }
-         },
-        "actconn": { "type": "long", "index": "not_analyzed" },
-        "backend_queue": { "type": "long", "index": "not_analyzed" },
-        "beconn": { "type": "long", "index": "not_analyzed" },
-        "bytes": { "type": "long", "index": "not_analyzed" },
-        "bytes_read": { "type": "long", "index": "not_analyzed" },
-        "datastore_latency_from": { "type": "long", "index": "not_analyzed" },
-        "datastore_latency_to": { "type": "long", "index": "not_analyzed" },
-        "feconn": { "type": "long", "index": "not_analyzed" },
-        "response_time": { "type": "long", "index": "not_analyzed" },
-        "retries": { "type": "long", "index": "not_analyzed" },
-        "srv_queue": { "type": "long", "index": "not_analyzed" },
-        "srvconn": { "type": "long", "index": "not_analyzed" },
-        "time_backend_connect": { "type": "long", "index": "not_analyzed" },
-        "time_backend_response": { "type": "long", "index": "not_analyzed" },
-        "time_duration": { "type": "long", "index": "not_analyzed" },
-        "time_queue": { "type": "long", "index": "not_analyzed" },
-        "time_request": { "type": "long", "index": "not_analyzed" }
-       }
-    }
-  }
-}
-EOF
-
 # Create Logstash configuration file
 tee -a /etc/logstash/conf.d/logstash.conf <<EOF
 #########
@@ -171,10 +111,10 @@ tee -a /etc/logstash/conf.d/logstash.conf <<EOF
 #########
 input {
         redis {
-                host => "172.16.7.232"
+                host => "10.38.2.61"
                 data_type => "list"
                 key => "logstash"
-                threads => 8
+                threads => 4
         }
 }
 ########################
@@ -183,7 +123,7 @@ input {
 filter {
         if [type] == "syslog" {
                 mutate {
-                        add_tag => [ "RHEL" ]
+                        add_tag => [ "RedHat" ]
                 }
         }
         if [type] == "firewall" {
@@ -225,7 +165,7 @@ filter {
 # SYSLOG #
 ##########
 filter {
-        if [type] == "RHEL" {
+        if [type] == "RedHat" {
                 grok {
                         match => [ "message", "<%{POSINT:syslog_pri}>%{SYSLOGTIMESTAMP:syslog_timestamp} %{SYSLOGHOST:syslog_hostname} %{DATA:syslog_program}(?:\[%{POSINT:syslog_pid}\])?: %{GREEDYDATA:syslog_message}" ]
                         add_field => [ "received_at", "%{@timestamp}" ]
@@ -374,7 +314,7 @@ filter {
 ############################
 ## RHEL login filter ##
 #filter {
-#               if [tag] == "syslog" {
+#               if [tag] == "RedHat" {
 #                               grok {
 #                                               type => "syslog"
 #                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for invalid user %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
@@ -401,20 +341,6 @@ filter {
 # Nagios Filter for alerts #
 ############################
 
-filter {
-        if "syslog" in [tags] {
-                grok {
-                        patterns_dir => "/etc/logstash/patterns"
-                        match => [
-                                "message", "%{SYSLOGLINE} nagios log test"
-                        ]
-                        add_tag => [ "nagios_check_syslog_test" ]
-                        add_field => [
-                                "nagios_service", "LogstashAlertTest"
-                                ]
-                }
-        }
-}
 ##############################################################
 # Microsoft IIS logging....Use NXLOG for client side logging #
 ##############################################################
@@ -435,29 +361,92 @@ filter {
 
 output {
         elasticsearch {
-                cluster => "prod_es_cluster"
-                host => "ceelkes-ob-3p"
+                cluster => "dev_es_cluster"
+                host => "ceelkes-ob-1d"
                 port => "9300"
                 protocol => "node"
                 flush_size => 1
-                workers => 8
+                workers => 12
                 manage_template => true
                 template => "/opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json"
         }
-#if "nagios_check_syslog_test" in [tags] {
-#        nagios_nsca {
-#                host => "10.8.31.12"
-#                port => 5667
-#                send_nsca_bin => "/opt/collegis/software/nagios/nsca-2.9.1/src/send_nsca"
-#                nagios_host => "localhost"
-#                nagios_service => "LogstashAlertTest"
-#                nagios_status => 2
-#                message_format => "%{SYSLOGTIME}  %{SYSLOGHOST}"
-#                }
-#        }
-}
 EOF
 
+# Update elasticsearch-template for logstash
+mv /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json.orig
+tee -a /opt/logstash/lib/logstash/outputs/elasticsearch/elasticsearch-template.json <<EOF
+{
+  "template" : "logstash-*",
+  "settings" : {
+    "index.refresh_interval" : "5s"
+    "index.number_of_shards" : 5,
+        "index.number_of_replicas" : 1,
+        "index.query.default_field" : "@message",
+        "index.routing.allocation.total_shards_per_node" : 3,
+        "index.auto_expand_replicas": false
+  },
+  "mappings" : {
+    "_default_": {
+            "_all": { "enabled": false },
+            "_source": { "compress": false },
+            "dynamic_templates": [
+                {
+                    "fields_template" : {
+                        "mapping": { "type": "string", "index": "not_analyzed" },
+                        "path_match": "@fields.*"
+                    }
+                },
+                {
+                    "tags_template" : {
+                        "mapping": { "type": "string", "index": "not_analyzed" },
+                        "path_match": "@tags.*"
+                    }
+                }
+            ],
+         "properties" : {
+         "@version": { "type": "string", "index": "not_analyzed" },
+         "@fields": { "type": "object", "dynamic": true, "path": "full" },
+         "@source" : { "type" : "string", "index" : "not_analyzed" },
+         "@source_host" : { "type" : "string", "index" : "not_analyzed" },
+         "@source_path" : { "type" : "string", "index" : "not_analyzed" },
+         "@timestamp" : { "type" : "date", "index" : "not_analyzed" },
+         "@type" : { "type" : "string", "index" : "not_analyzed" },
+         "@message" : { "type" : "string", "analyzer" : "whitespace" }
+             }
+        }
+    }
+}
+view raw
+         "geoip"  : {
+           "type" : "object",
+             "dynamic": true,
+             "path": "full",
+             "properties" : {
+               "location" : { "type" : "geo_point" }
+             }
+         },
+        "actconn": { "type": "long", "index": "not_analyzed" },
+        "backend_queue": { "type": "long", "index": "not_analyzed" },
+        "beconn": { "type": "long", "index": "not_analyzed" },
+        "bytes": { "type": "long", "index": "not_analyzed" },
+        "bytes_read": { "type": "long", "index": "not_analyzed" },
+        "datastore_latency_from": { "type": "long", "index": "not_analyzed" },
+        "datastore_latency_to": { "type": "long", "index": "not_analyzed" },
+        "feconn": { "type": "long", "index": "not_analyzed" },
+        "response_time": { "type": "long", "index": "not_analyzed" },
+        "retries": { "type": "long", "index": "not_analyzed" },
+        "srv_queue": { "type": "long", "index": "not_analyzed" },
+        "srvconn": { "type": "long", "index": "not_analyzed" },
+        "time_backend_connect": { "type": "long", "index": "not_analyzed" },
+        "time_backend_response": { "type": "long", "index": "not_analyzed" },
+        "time_duration": { "type": "long", "index": "not_analyzed" },
+        "time_queue": { "type": "long", "index": "not_analyzed" },
+        "time_request": { "type": "long", "index": "not_analyzed" }
+       }
+    }
+  }
+}
+EOF
 
 # Restart logstash service
 service logstash restart

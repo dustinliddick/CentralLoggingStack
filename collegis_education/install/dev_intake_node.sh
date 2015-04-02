@@ -33,11 +33,6 @@ echo "Your FQDN is currently ${red}$yourfqdn${NC}"
 echo "Detected IP Address is ${red}$IPADDY${NC}"
 sleep 10
 
-echo "adding new database to satelite server"
-curl http://il1satsvr01.deltakedu.corp/pub/scripts/install/plain/AddSatelliteServerToHostFile.sh | /bin/bash
-sleep 5
-echo ""
-echo ""
 echo "${red}checking see status of hostname adition${NC}"
 cat /etc/hosts
 echo ""
@@ -49,8 +44,6 @@ sleep 10
 ## PRE-INSTALL STEPS  ##################################################################################################################################
 ##                    ##################################################################################################################################
 ########################################################################################################################################################
-# Register Server to satellite server
-curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
 
 # Modify subscription channels for server in satellite
 rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq

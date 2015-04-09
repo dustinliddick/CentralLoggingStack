@@ -300,22 +300,22 @@ filter {
 #               if [tag] == "syslog" {
 #                               grok {
 #                                               type => "syslog"
-#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for invalid user %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
+#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for invalid user %{poc_user:poc_user} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
 #                                               add_tag => "ssh_brute_force_attack"
 #                                       }
 #                               grok {
 #                                               type => "syslog"
-#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sudo: pam_unix\(sudo:auth\): authentication failure; logname=%{USERNAME:logname} uid=%{BASE10NUM:uid} euid=%{BASE10NUM:euid} tty=%{TTY:tty} ruser=%{USERNAME:ruser} rhost=(?:%{HOSTNAME:remote_host}|\s*) user=%{USERNAME:user}"
+#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sudo: pam_unix\(sudo:auth\): authentication failure; logname=%{poc_user:logname} uid=%{BASE10NUM:uid} euid=%{BASE10NUM:euid} tty=%{TTY:tty} ruser=%{poc_user:ruser} rhost=(?:%{HOSTNAME:remote_host}|\s*) user=%{poc_user:user}"
 #                                               add_tag => "sudo_auth_failure"
 #                                       }
 #                               grok {
 #                                               type => "syslog"
-#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
+#                                               match => "message", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Failed password for %{poc_user:poc_user} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
 #                                               add_tag => "ssh_failed_login"
 #                                       }
 #                               grok {
 #                                               type => "syslog"
-#                                               match => "messge", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Accepted password for %{USERNAME:username} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
+#                                               match => "messge", "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} sshd\[%{BASE10NUM}\]: Accepted password for %{poc_user:poc_user} from %{IP:src_ip} port %{BASE10NUM:port} ssh2"
 #                                               add_tag => "ssh_sucessful_login"
 #                                       }
 #                       }

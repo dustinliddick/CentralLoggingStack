@@ -124,7 +124,7 @@ cp -R /op/collegis/software/kibana-3.0.1/* /opt/rh/httpd23/root/var/www/kibana3/
 #cp /opt/collegis/software/kibana/kibana3.conf /opt/rh/httpd24/root/etc/httpd/conf.d/
 
 # Generate loging to access Kibana
-#htpasswd -c /etc/httpd/conf.d/kibana-htpasswd `username`
+#htpasswd -c /etc/httpd/conf.d/kibana-htpasswd `poc_user`
 
 # Restart Apache to put changes into effect
 service httpd24-httpd restart

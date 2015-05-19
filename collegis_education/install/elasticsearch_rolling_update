@@ -81,3 +81,5 @@ curl -XPUT localhost:9200/_cluster/settings -d '{
 
 echo "Observe that all shards are properly allocated on all nodes"
 echo "Balancing may take some time"
+
+curl -XGET 'localhost:9200'

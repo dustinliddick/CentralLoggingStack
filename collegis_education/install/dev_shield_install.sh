@@ -47,6 +47,8 @@ yum install -y elasticsearch
 # Start the Shield install
 /usr/share/elasticsearch/bin/plugin -i elasticsearch/shield/latest
 
+
+
 # Message Authentication
 #  verifies that a message has not been tampered with; ystem key is a symmetric
 #  key, the same key must be on every node in the cluster. Copy the key to

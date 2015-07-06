@@ -2,18 +2,15 @@
 
 set -e
 # Setup logging directories
-mkdir -p /opt/collegis/software/logstash/install
+mkdir -p /opt/collegis/software/logstash
 # Logs stderr and stdout to separate files.
-exec 2> >(tee "/opt/collegis/software/logstash/install/install_Logstash-ELK-ES-Cluster-client-node.err")
-exec 1> >(tee "/opt/collegis/software/logstash/install/install_Logstash-ELK-ES-Cluster-client-node.log")
+exec 2> >(tee "/opt/collegis/software/logstash/kibana.err")
+exec 1> >(tee "/opt/collegis/software/logstash/kibana.log")
 
 # Register server with satellite
 curl http://il1satsvr01.deltakedu.corp/pub/bootstrap/bootstrap-server.sh | /bin/bash
 rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
 rhn-channel --add --channel=rhel-x86_64-server-6-rhscl-1 -u dustin.liddick -p bviad3kq
-
-# update box
-yum -y --nogpgcheck update
 
 # install apache24
 yum -y install httpd24
@@ -57,7 +54,7 @@ function (Settings) {
      *  +elasticsearch: {server: "http://localhost:9200", withCredentials: true}+
      *
      */
-    elasticsearch: "http://10.8.31.50:9200",
+    elasticsearch: "http://10.8.31.51:9200",
 
     /** @scratch /configuration/config.js/5
      *
@@ -117,17 +114,17 @@ mkdir -p /var/www/kibana3
 cp -R /op/collegis/software/kibana-3.0.1/* /opt/rh/httpd23/root/var/www/kibana3/
 
 
-cd /opt/collegis/software/kibana/
-wget https://assets.digitalocean.com/articles/logstash/kibana3.conf
-vi kibana3.conf
+#cd /opt/collegis/software/kibana/
+#wget https://assets.digitalocean.com/articles/logstash/kibana3.conf
+#vi kibana3.conf
 
 # Edit virtual host file and change FQDN to server FQDN;
 # change `root` to where we installed Kibana
 # copy it to your Apache configuration configuration
-cp /opt/collegis/software/kibana/kibana3.conf /opt/rh/httpd24/root/etc/httpd/conf.d/
+#cp /opt/collegis/software/kibana/kibana3.conf /opt/rh/httpd24/root/etc/httpd/conf.d/
 
 # Generate loging to access Kibana
-htpasswd -c /etc/httpd/conf.d/kibana-htpasswd `username`
+#htpasswd -c /etc/httpd/conf.d/kibana-htpasswd `poc_user`
 
 # Restart Apache to put changes into effect
 service httpd24-httpd restart

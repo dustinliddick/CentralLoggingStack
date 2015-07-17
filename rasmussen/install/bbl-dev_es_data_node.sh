@@ -7,10 +7,9 @@
 set -e
 # Setup logging
 # Logs stderr and stdout to separate files.
-mkdir -p /opt/collegis/software/logstash
-mkdir -p /opt/collegis/software/java
-exec 2> >(tee "/opt/collegis/software/logstash/install_masterdata_node.err")
-exec 1> >(tee "/opt/collegis/software/logstash/install_masterdata_node.log")
+mkdir -p /opt/collegis/software/logstash java
+exec 2> >(tee "/opt/collegis/software/logstash/install_data_node.err")
+exec 1> >(tee "/opt/collegis/software/logstash/install_data_node.log")
 
 # Setting colors for output
 red="$(tput setaf 1)"
@@ -32,13 +31,19 @@ echo "Your FQDN is currently ${red}$yourfqdn${NC}"
 echo "Detected IP Address is ${red}$IPADDY${NC}"
 sleep 10
 
+echo ""
+echo ""
 echo "${red}checking see status of hostname adition${NC}"
 cat /etc/hosts
 echo ""
 echo ""
 echo "now sleeping after satelite hostfile addition for 10s"
 sleep 10
-
+########################################################################################################################################################
+##                    ##################################################################################################################################
+## PRE-INSTALL STEPS  ##################################################################################################################################
+##                    ##################################################################################################################################
+########################################################################################################################################################
 # Modify subscription channels for server in satellite
 rhn-channel --add --channel=clone-epel_rhel6x_x86_64 -u dustin.liddick -p bviad3kq
 echo "satalitte server configureation done"
@@ -68,6 +73,7 @@ EOF
 
 # Install Oracle Java 8
 echo "Installing Oracle Java 8"
+mkdir /opt/collegis/software/java
 cd /opt/collegis/software/java
 wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u20-b26/jdk-8u20-linux-x64.tar.gz"
 tar -zxvf jdk-8u20-linux-x64.tar.gz
@@ -86,7 +92,7 @@ echo ""
 echo "cluster.name: dev_es_cluster" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.name: $yourhostname" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.datacenter: latisys" >> /etc/elasticsearch/elasticsearch.yml
-echo "node.master: true" >> /etc/elasticsearch/elasticsearch.yml
+echo "node.master: false" >> /etc/elasticsearch/elasticsearch.yml
 echo "node.data: true" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_shards: 5" >> /etc/elasticsearch/elasticsearch.yml
 echo "index.number_of_replicas: 1" >> /etc/elasticsearch/elasticsearch.yml

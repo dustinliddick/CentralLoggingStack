@@ -51,4 +51,4 @@ discovery.zen.minimum_master_nodes: 2
 Â
 # Unicast Discovery (disable multicast)
 discovery.zen.ping.multicast.enabled: false
-discovery.zen.ping.unicast.hosts: [ "ceelkes-ob-1p", "ceelkes-ob-2p", "ceelkes-ob-3p" ]
+discovery.zen.ping.unicast.hosts: [ "ceelkes-ob-1d", "ceelkes-ob-2d", "ceelkes-ob-3d", "ceelkes-ob-4d", "ceelkes-ob-5d", "ceelkes-ob-6d", "ceelkes-ob-7d", "ceelkes-ob-8d" ]

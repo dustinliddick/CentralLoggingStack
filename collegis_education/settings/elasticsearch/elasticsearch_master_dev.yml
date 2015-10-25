@@ -5,50 +5,52 @@
 #
 Â
 # Cluster / Node Basics
-cluster.name: logng
-Â
+cluster.name: dev_es_cluster
+node.data: false
+node.master: true
+
 # Node can have abritrary attributes we can use for routing
-node.name: ceelkes-ob-1p
+node.name: cenodename
 node.datacenter: latisys
-Â
+
 # Force all memory to be locked, forcing the JVM to never swap
 bootstrap.mlockall: true
-Â
+
 ## Threadpool Settings ##
-Â
+
 # Search pool
 threadpool.search.type: fixed
 threadpool.search.size: 20
 threadpool.search.queue_size: 100
-Â
+
 # Bulk pool
 threadpool.bulk.type: fixed
 threadpool.bulk.size: 60
 threadpool.bulk.queue_size: 300
-Â
+
 # Index pool
 threadpool.index.type: fixed
 threadpool.index.size: 20
 threadpool.index.queue_size: 100
-Â
+
 # Indices settings
 indices.memory.index_buffer_size: 30%
 indices.memory.min_shard_index_buffer_size: 12mb
 indices.memory.min_index_buffer_size: 96mb
-Â
+
 # Cache Sizes
 indices.fielddata.cache.size: 15%
 indices.fielddata.cache.expire: 6h
 indices.cache.filter.size: 15%
 indices.cache.filter.expire: 6h
-Â
+
 # Indexing Settings for Writes
 index.refresh_interval: 30s
 index.translog.flush_threshold_ops: 50000
-Â
+
 # Minimum nodes alive to constitute an operational cluster
 discovery.zen.minimum_master_nodes: 2
-Â
+
 # Unicast Discovery (disable multicast)
 discovery.zen.ping.multicast.enabled: false
 discovery.zen.ping.unicast.hosts: [ "ceelkes-ob-1d", "ceelkes-ob-2d", "ceelkes-ob-3d", "ceelkes-ob-4d", "ceelkes-ob-5d", "ceelkes-ob-6d", "ceelkes-ob-7d", "ceelkes-ob-8d" ]

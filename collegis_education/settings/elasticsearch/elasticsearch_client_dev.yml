@@ -4,13 +4,11 @@
 # Base configuration for a write heavy cluster
 #
 
-# Cluster / Node Basics
+## Cluster / Node Basics ##
 cluster.name: dev_es_cluster
 node.data: false
 node.master: false
-
-# Node can have abritrary attributes we can use for routing
-node.name: ceelkes-ob-1p
+node.name: cenodename
 node.datacenter: latisys
 
 # Force all memory to be locked, forcing the JVM to never swap
@@ -48,9 +46,12 @@ indices.cache.filter.expire: 6h
 index.refresh_interval: 30s
 index.translog.flush_threshold_ops: 50000
 
-# Minimum nodes alive to constitute an operational cluster
+# Minimum nodes alive to constitute an operational cluster; Prevent split brain ES Cluster n/2+1
 discovery.zen.minimum_master_nodes: 2
 
 # Unicast Discovery (disable multicast)
 discovery.zen.ping.multicast.enabled: false
 discovery.zen.ping.unicast.hosts: [ "ceelkes-ob-1d", "ceelkes-ob-2d", "ceelkes-ob-3d", "ceelkes-ob-4d", "ceelkes-ob-5d", "ceelkes-ob-6d", "ceelkes-ob-7d", "ceelkes-ob-8d" ]
+
+### Shield configurations ###
+marvel.agent.exporter.es.hosts: [ "http://marvel_export:marvel_export@ceelkes-ob-1d.nonprod.corp:9200", "http://marvel_export:marvel_export@ceelkes-ob-2d.nonprod.corp:9200", "http://marvel_export:marvel_export@ceelkes-ob-3d.nonprod.corp:9200"]
